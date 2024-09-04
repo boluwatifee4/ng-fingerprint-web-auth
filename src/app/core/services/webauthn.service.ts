@@ -17,9 +17,9 @@ export class WebAuthnService {
   async register() {
     const challenge = this.generateRandomBuffer(32);
 
-    const publicKey:any = {
+    const publicKey: PublicKeyCredentialCreationOptions = {
       challenge: challenge,
-      rp: { name: "YourApp" },
+      rp: { name: "NgBimaFingerprint" },
       user: {
         id: this.generateRandomBuffer(16),
         name: "user@example.com",
@@ -29,11 +29,13 @@ export class WebAuthnService {
       authenticatorSelection: {
         authenticatorAttachment: "platform",
         userVerification: "required"
-      }
+      },
+      timeout: 60000,
+      attestation: "direct"
     };
 
     try {
-      const credential = await navigator.credentials.create({ publicKey });
+      const credential = await navigator.credentials.create({ publicKey }) as PublicKeyCredential;
       this.storeCredential(credential, challenge);
       return credential;
     } catch (err) {
@@ -48,17 +50,18 @@ export class WebAuthnService {
       throw new Error("No stored credential found");
     }
 
-    const publicKey:any = {
+    const publicKey: PublicKeyCredentialRequestOptions = {
       challenge: new Uint8Array(storedCredential.challenge),
       allowCredentials: [{
         id: new Uint8Array(storedCredential.rawId),
         type: "public-key"
       }],
-      userVerification: "required"
+      userVerification: "required",
+      timeout: 60000
     };
 
     try {
-      const credential = await navigator.credentials.get({ publicKey });
+      const credential = await navigator.credentials.get({ publicKey }) as PublicKeyCredential;
       return credential;
     } catch (err) {
       console.error("Authentication failed", err);
@@ -66,7 +69,7 @@ export class WebAuthnService {
     }
   }
 
-  private storeCredential(credential: any, challenge: Uint8Array) {
+  private storeCredential(credential: PublicKeyCredential, challenge: Uint8Array) {
     const credentialData = {
       rawId: Array.from(new Uint8Array(credential.rawId)),
       challenge: Array.from(challenge)
